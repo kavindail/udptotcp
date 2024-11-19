@@ -11,7 +11,6 @@
 #define BUFFERSIZE 1024
 
 using namespace std;
-
 class Server {
 public:
   int socketFD;
@@ -66,7 +65,6 @@ int main(int argc, char *argv[]) {
   Server *server = new Server(port);
   server->create_socket();
   server->bind_socket();
-
   // continue to read messages until not exited
   while (!exit_flag) {
     server->print_message();
