@@ -32,9 +32,15 @@ void forward_packets(const char *listen_ip, int listen_port,
   std::cout << "Success, waiting for udp packets on " << listen_ip << ":"
             << listen_port << std::endl;
 
+  struct sockaddr_in server_addr;
+  server_addr.sin_port = htons(forwardPort);
+  server_addr.sin_addr.s_addr = inet_addr(forwardIP);
+
   while (true) {
     socklen_t len = sizeof(sender_addr);
 
+    // TODO: Check if the server receives a packet from the server addr
+    // If its from the server_addr & port then you can send this to the client
     ssize_t recv_len = recvfrom(sock, buffer, buffer_size, 0,
                                 (struct sockaddr *)&sender_addr, &len);
     if (recv_len < 0) {
@@ -42,15 +48,24 @@ void forward_packets(const char *listen_ip, int listen_port,
       break;
     }
 
+    std::string serverIPString = (forwardIP);
+    std::string senderIPString = (server_addr.sin_addr);
+    std::cout << "server_addr.sin_addr: " << serverIPString << std::endl;
+    std::cout << "sender_addr.sin_addr: " << sender_addr.sin_addr.s_addr
+              << std::endl;
+
+    if (inet_ntoa(sender_addr.sin_addr) == serverIPString.c_str()) {
+      std::cout << "Received a response from the server ending";
+      break;
+    }
     std::cout << "Received packet from " << inet_ntoa(sender_addr.sin_addr)
               << ":" << ntohs(sender_addr.sin_port) << std::endl;
 
     std::cout << "Packet contains data:  " << buffer << std::endl;
 
-    if (sendto(sock, buffer, recv_len, 0, (struct sockaddr *)&sender_addr,
+    if (sendto(sock, buffer, recv_len, 0, (struct sockaddr *)&server_addr,
                len) < 0) {
       std::cout << "sendto error" << std::endl;
-      break;
     }
 
     // TODO: Change this to use the port and ip taken in from the command line
