@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <vector>
 #define DEFAULTFDVALUE -1
-#define NUMBOFARGS 4
+#define NUMBOFARGS 7
 #define BUFFERSIZE 1024
 
 using namespace std;
@@ -23,25 +23,23 @@ public:
         timeout(timeout) {}
 
   ~Client() { close_socket(socketFD); }
-
-  // function prototypes
   int create_socket();
   void send_message(int socketFD, string message);
   void close_socket(int socketFD);
 };
 
 int main(int argc, char *argv[]) {
-  // validate command line arguments
   if (argc != NUMBOFARGS) {
     cerr << "Incorrect amount of command line arguments,only provide IP "
-            "Address, port and timeout value"
+            "Address, port and timeout value Example: ./client --target-ip "
+            "127.0.0.1 --target-port 80 --timeout 2"
          << endl;
     return EXIT_FAILURE;
   }
 
-  string ipAddress = argv[1];
-  int port = stoi(argv[2]);
-  int timeout = stoi(argv[3]);
+  string ipAddress = argv[2];
+  int port = stoi(argv[4]);
+  int timeout = stoi(argv[6]);
   string message;
 
   cout << "Type your message:\n" << endl;

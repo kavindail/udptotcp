@@ -7,33 +7,32 @@
 #include <unistd.h>
 
 #define DEFAULTFDVALUE -1
-#define NUMBOFARGS 2
+#define NUMBOFARGS 5
 #define BUFFERSIZE 1024
 
 using namespace std;
+
 class Server {
 public:
   int socketFD;
   const int port;
+  const string listenIP;
 
-  Server(const int port) : socketFD(DEFAULTFDVALUE), port(port) {}
+  Server(const string& listenIP, const int port)
+      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP) {}
 
   ~Server() { close_socket(socketFD); }
 
-  // function prototypes
   int create_socket();
   void bind_socket();
   void print_message();
   void close_socket(int socketFD);
 };
 
-// flag to exit program
 volatile sig_atomic_t exit_flag = 0;
 
-// function that sets exit flag
 void sigint_handler(int signum) { exit_flag = 1; }
 
-// function to set up signal handler
 void setup_signal_handler() {
   struct sigaction sa;
   memset(&sa, 0, sizeof(sa));
@@ -47,25 +46,31 @@ void setup_signal_handler() {
   }
 }
 
-int main(int argc, char *argv[]) {
-  // setup signal handler
+int main(int argc, char* argv[]) {
   setup_signal_handler();
 
-  // validate command line arguments
   if (argc != NUMBOFARGS) {
-    cerr << "Incorrect number of command line arguments, only provide port "
-            "number!"
-         << endl;
+    cerr << "Incorrect number of command line arguments. Usage: " << argv[0]
+         << " --listen-ip <ip> --listen-port <port>" << endl;
     return EXIT_FAILURE;
   }
-  int port = stoi(argv[1]);
+
+  if (string(argv[1]) != "--listen-ip") { cerr << "Expected --listen-ip as first argument." << endl;
+    return EXIT_FAILURE;
+  }
+  string listenIP = argv[2];
+
+  if (string(argv[3]) != "--listen-port") {
+    cerr << "Expected --listen-port as third argument." << endl;
+    return EXIT_FAILURE;
+  }
+  int port = stoi(argv[4]);
 
   cout << "Server has started" << endl;
 
-  Server *server = new Server(port);
+  Server* server = new Server(listenIP, port);
   server->create_socket();
   server->bind_socket();
-  // continue to read messages until not exited
   while (!exit_flag) {
     server->print_message();
   }
@@ -89,16 +94,15 @@ void Server::bind_socket() {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_addr.s_addr = inet_addr(listenIP.c_str());
   addr.sin_port = htons(port);
 
-  // bind to port
-  if (bind(socketFD, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+  if (bind(socketFD, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
     cerr << "Error in binding socket: " << strerror(errno) << endl;
     exit(EXIT_FAILURE);
   }
 
-  cout << "Socket successfully bound at port " << port << endl;
+  cout << "Socket successfully bound at " << listenIP << " port " << port << endl;
 }
 
 void Server::print_message() {
@@ -106,10 +110,9 @@ void Server::print_message() {
   socklen_t client_addr_size = sizeof(client_addr);
   char buffer[BUFFERSIZE];
 
-  // read from client
   ssize_t bytesReceived =
       recvfrom(socketFD, buffer, BUFFERSIZE - 1, 0,
-               (struct sockaddr *)&client_addr, &client_addr_size);
+               (struct sockaddr*)&client_addr, &client_addr_size);
   if (bytesReceived == -1) {
     cerr << "Error receiving message: " << strerror(errno) << endl;
     return;
@@ -118,10 +121,9 @@ void Server::print_message() {
   buffer[bytesReceived] = '\0';
   cout << "Received message: " << buffer << endl;
 
-  // send the ack back to client
-  const char *ackMessage = "ACK";
+  const char* ackMessage = "ACK";
   ssize_t ackBytes = sendto(socketFD, ackMessage, strlen(ackMessage), 0,
-                            (struct sockaddr *)&client_addr, client_addr_size);
+                            (struct sockaddr*)&client_addr, client_addr_size);
   if (ackBytes == -1) {
     cerr << "Error sending acknowledgment: " << strerror(errno) << endl;
   } else {
