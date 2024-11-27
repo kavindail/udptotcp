@@ -18,7 +18,7 @@ public:
   const int port;
   const string listenIP;
 
-  Server(const string& listenIP, const int port)
+  Server(const string &listenIP, const int port)
       : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP) {}
 
   ~Server() { close_socket(socketFD); }
@@ -46,7 +46,9 @@ void setup_signal_handler() {
   }
 }
 
-int main(int argc, char* argv[]) {
+// TODO: Implement sequence number verification logic here to take into account
+// delayed or repeated packets
+int main(int argc, char *argv[]) {
   setup_signal_handler();
 
   if (argc != NUMBOFARGS) {
@@ -55,7 +57,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  if (string(argv[1]) != "--listen-ip") { cerr << "Expected --listen-ip as first argument." << endl;
+  if (string(argv[1]) != "--listen-ip") {
+    cerr << "Expected --listen-ip as first argument." << endl;
     return EXIT_FAILURE;
   }
   string listenIP = argv[2];
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
 
   cout << "Server has started" << endl;
 
-  Server* server = new Server(listenIP, port);
+  Server *server = new Server(listenIP, port);
   server->create_socket();
   server->bind_socket();
   while (!exit_flag) {
@@ -97,12 +100,13 @@ void Server::bind_socket() {
   addr.sin_addr.s_addr = inet_addr(listenIP.c_str());
   addr.sin_port = htons(port);
 
-  if (bind(socketFD, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+  if (bind(socketFD, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
     cerr << "Error in binding socket: " << strerror(errno) << endl;
     exit(EXIT_FAILURE);
   }
 
-  cout << "Socket successfully bound at " << listenIP << " port " << port << endl;
+  cout << "Socket successfully bound at " << listenIP << " port " << port
+       << endl;
 }
 
 void Server::print_message() {
@@ -112,7 +116,7 @@ void Server::print_message() {
 
   ssize_t bytesReceived =
       recvfrom(socketFD, buffer, BUFFERSIZE - 1, 0,
-               (struct sockaddr*)&client_addr, &client_addr_size);
+               (struct sockaddr *)&client_addr, &client_addr_size);
   if (bytesReceived == -1) {
     cerr << "Error receiving message: " << strerror(errno) << endl;
     return;
@@ -121,9 +125,9 @@ void Server::print_message() {
   buffer[bytesReceived] = '\0';
   cout << "Received message: " << buffer << endl;
 
-  const char* ackMessage = "ACK";
+  const char *ackMessage = "ACK";
   ssize_t ackBytes = sendto(socketFD, ackMessage, strlen(ackMessage), 0,
-                            (struct sockaddr*)&client_addr, client_addr_size);
+                            (struct sockaddr *)&client_addr, client_addr_size);
   if (ackBytes == -1) {
     cerr << "Error sending acknowledgment: " << strerror(errno) << endl;
   } else {

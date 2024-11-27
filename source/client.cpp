@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
+#include <limits>
 #define DEFAULTFDVALUE -1
 #define NUMBOFARGS 7
 #define BUFFERSIZE 1024
@@ -28,10 +29,11 @@ public:
   void close_socket(int socketFD);
 };
 
+// TODO: Implement sequence number logic here
 int main(int argc, char *argv[]) {
   if (argc != NUMBOFARGS) {
-    cerr << "Incorrect amount of command line arguments,only provide IP "
-            "Address, port and timeout value Example: ./client --target-ip "
+    cerr << "Incorrect amount of command line arguments, only provide IP "
+            "Address, port and timeout value. Example: ./client --target-ip "
             "127.0.0.1 --target-port 80 --timeout 2"
          << endl;
     return EXIT_FAILURE;
@@ -40,16 +42,23 @@ int main(int argc, char *argv[]) {
   string ipAddress = argv[2];
   int port = stoi(argv[4]);
   int timeout = stoi(argv[6]);
-  string message;
-
-  cout << "Type your message:\n" << endl;
-
-  cin >> message;
 
   Client *client = new Client(ipAddress, port, timeout);
   int socketFD = client->create_socket();
-  client->send_message(socketFD, message);
-  delete (client);
+
+  string message;
+  cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Clear input buffer
+
+  while (true) {
+    cout << "Type your message (or type 'exit' to quit):\n";
+    getline(cin, message);
+    if (message == "exit") {
+      break;
+    }
+    client->send_message(socketFD, message);
+  }
+
+  delete client;
 
   return 0;
 }
@@ -88,7 +97,6 @@ void Client::send_message(int socketFD, string message) {
   socklen_t server_len = sizeof(server_addr);
 
   while (true) {
-    // send the message
     request = sendto(socketFD, message.c_str(), message.size(), 0,
                      (sockaddr *)&server_addr, server_len);
     if (request == -1) {
@@ -98,7 +106,6 @@ void Client::send_message(int socketFD, string message) {
     cout << "Message sent to server, waiting " << timeout
          << " seconds for acknowledgment..." << endl;
 
-    // wait for acknowledgment
     ssize_t ack = recvfrom(socketFD, buffer, BUFFERSIZE, 0,
                            (sockaddr *)&server_addr, &server_len);
     if (ack > 0) {
@@ -107,7 +114,6 @@ void Client::send_message(int socketFD, string message) {
       break;
     }
 
-    // handle timeout
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       cout << "No acknowledgment received within timeout, resending message..."
            << endl;

@@ -8,6 +8,7 @@
 #include <thread>
 #include <unistd.h>
 #include <chrono>
+#include <random>  // Added for random number generation
 
 void forward_packets(const char *listen_ip, int listen_port,
                      const char *forwardIP, int forwardPort, int buffer_size,
@@ -49,6 +50,11 @@ void forward_packets(const char *listen_ip, int listen_port,
   memset(&client_addr, 0, sizeof(client_addr));
   bool client_addr_set = false;
 
+  // Random number generator setup
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> dis(0.0, 1.0);
+
   while (true) {
     socklen_t len = sizeof(sender_addr);
 
@@ -76,13 +82,17 @@ void forward_packets(const char *listen_ip, int listen_port,
     bool delay_packet = false;
     int delay_duration = 0;
 
+    double random_value = dis(gen);  // Generate a random number between 0 and 1
+
     if (is_from_server) {
-      drop_packet = server_drop_chance > 0.0;
-      delay_packet = server_delay_chance > 0.0;
+      drop_packet = random_value < server_drop_chance;
+      random_value = dis(gen);  // Generate a new random number for delay
+      delay_packet = random_value < server_delay_chance;
       delay_duration = server_delay_time;
     } else {
-      drop_packet = client_drop_chance > 0.0;
-      delay_packet = client_delay_chance > 0.0;
+      drop_packet = random_value < client_drop_chance;
+      random_value = dis(gen);  // Generate a new random number for delay
+      delay_packet = random_value < client_delay_chance;
       delay_duration = client_delay_time;
     }
 
@@ -178,33 +188,53 @@ int main(int argc, char *argv[]) {
 
     if (args.find("--client-drop") != args.end()) {
       client_drop_chance = std::stod(args["--client-drop"]);
+    } else {
+      throw std::invalid_argument("Missing --client-drop");
     }
 
     if (args.find("--server-drop") != args.end()) {
       server_drop_chance = std::stod(args["--server-drop"]);
+    } else {
+      throw std::invalid_argument("Missing --server-drop");
     }
 
     if (args.find("--client-delay") != args.end()) {
       client_delay_chance = std::stod(args["--client-delay"]);
+    } else {
+      throw std::invalid_argument("Missing --client-delay");
     }
 
     if (args.find("--server-delay") != args.end()) {
       server_delay_chance = std::stod(args["--server-delay"]);
+    } else {
+      throw std::invalid_argument("Missing --server-delay");
     }
 
     if (args.find("--client-delay-time") != args.end()) {
       client_delay_time = std::stoi(args["--client-delay-time"]);
+    } else {
+      throw std::invalid_argument("Missing --client-delay-time");
     }
 
     if (args.find("--server-delay-time") != args.end()) {
       server_delay_time = std::stoi(args["--server-delay-time"]);
+    } else {
+      throw std::invalid_argument("Missing --server-delay-time");
     }
 
   } catch (const std::exception &e) {
     std::cerr << "Error parsing arguments: " << e.what() << std::endl;
     std::cerr << "Usage: " << argv[0]
               << " --listen-ip <ip> --listen-port <port> --target-ip <ip> "
-                 "--target-port <port> [options]"
+                 "--target-port <port> --client-drop <chance> --server-drop <chance> "
+                 "--client-delay <chance> --server-delay <chance> "
+                 "--client-delay-time <ms> --server-delay-time <ms>"
+              << std::endl;
+    std::cerr << "Example: " << argv[0]
+              << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip 127.0.0.1 "
+                 "--target-port 9090 --client-drop 0.1 --server-drop 0.1 "
+                 "--client-delay 0.2 --server-delay 0.2 --client-delay-time 100 "
+                 "--server-delay-time 100"
               << std::endl;
     return EXIT_FAILURE;
   }
