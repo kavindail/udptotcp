@@ -8,7 +8,7 @@
 
 #define DEFAULTFDVALUE -1
 #define NUMBOFARGS 5
-#define BUFFERSIZE 1024
+#define BUFFERSIZE 1500
 
 using namespace std;
 
@@ -17,9 +17,10 @@ public:
   int socketFD;
   const int port;
   const string listenIP;
+  int expectedSequence; // Tracks the expected sequence (0 or 1)
 
   Server(const string &listenIP, const int port)
-      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP) {}
+      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP), expectedSequence(0) {}
 
   ~Server() { close_socket(socketFD); }
 
@@ -46,8 +47,6 @@ void setup_signal_handler() {
   }
 }
 
-// TODO: Implement sequence number verification logic here to take into account
-// delayed or repeated packets
 int main(int argc, char *argv[]) {
   setup_signal_handler();
 
@@ -123,15 +122,26 @@ void Server::print_message() {
   }
 
   buffer[bytesReceived] = '\0';
-  cout << "Received message: " << buffer << endl;
 
-  const char *ackMessage = "ACK";
-  ssize_t ackBytes = sendto(socketFD, ackMessage, strlen(ackMessage), 0,
+  // Check the first byte for the sequence number
+  int receivedSequence = buffer[0] - '0'; // Convert from ASCII to integer
+
+  // Send ACK for the received sequence
+  string ackMessage = "ACK: " + to_string(receivedSequence);
+  ssize_t ackBytes = sendto(socketFD, ackMessage.c_str(), ackMessage.size(), 0,
                             (struct sockaddr *)&client_addr, client_addr_size);
   if (ackBytes == -1) {
     cerr << "Error sending acknowledgment: " << strerror(errno) << endl;
+    return;
+  }
+
+  // Only process the message if the sequence matches the expected value
+  if (receivedSequence == expectedSequence) {
+    cout << "Received message: " << (buffer + 1) << endl; // Print everything after the first byte
+    expectedSequence = 1 - expectedSequence; // Toggle the expected sequence (0 -> 1, 1 -> 0)
   } else {
-    cout << "Acknowledgment sent to client" << endl;
+    cout << "Out-of-sequence packet received (expected " << expectedSequence
+         << ", got " << receivedSequence << "). Ignoring message." << endl;
   }
 }
 
