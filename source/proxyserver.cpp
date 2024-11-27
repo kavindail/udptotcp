@@ -8,7 +8,7 @@
 #include <thread>
 #include <unistd.h>
 #include <chrono>
-#include <random>  // Added for random number generation
+#include <random>
 
 void forward_packets(const char *listen_ip, int listen_port,
                      const char *forwardIP, int forwardPort, int buffer_size,
@@ -17,7 +17,7 @@ void forward_packets(const char *listen_ip, int listen_port,
                      int client_delay_time, int server_delay_time) {
   int sock;
   struct sockaddr_in listen_addr, sender_addr;
-  char *buffer = new char[buffer_size];
+  char *buffer = new char[buffer_size + 1];  // +1 for null terminator
 
   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
     std::cout << "Error creating socket" << std::endl;
@@ -56,14 +56,20 @@ void forward_packets(const char *listen_ip, int listen_port,
   std::uniform_real_distribution<> dis(0.0, 1.0);
 
   while (true) {
+    // Clear the buffer at the start of each iteration
+    memset(buffer, 0, buffer_size + 1);
+
     socklen_t len = sizeof(sender_addr);
 
     ssize_t recv_len = recvfrom(sock, buffer, buffer_size, 0,
                                 (struct sockaddr *)&sender_addr, &len);
     if (recv_len < 0) {
       std::cout << "recvfrom error" << std::endl;
-      continue;  
+      continue;
     }
+
+    // Null-terminate the buffer
+    buffer[recv_len] = '\0';
 
     std::string serverIPString = forwardIP;
     int serverIPPort = forwardPort;
@@ -98,11 +104,12 @@ void forward_packets(const char *listen_ip, int listen_port,
 
     if (drop_packet) {
       std::cout << "Packet dropped." << std::endl;
-      continue;  
+      continue;
     }
 
     if (delay_packet) {
-      std::cout << "Delaying packet for " << delay_duration << " milliseconds." << std::endl;
+      std::cout << "Delaying packet for " << delay_duration << " milliseconds."
+                << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(delay_duration));
     }
 
@@ -134,6 +141,9 @@ void forward_packets(const char *listen_ip, int listen_port,
                   << forwardPort << std::endl;
       }
     }
+
+    // Clear the buffer after processing the packet
+    memset(buffer, 0, buffer_size + 1);
   }
 
   close(sock);
@@ -226,14 +236,17 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error parsing arguments: " << e.what() << std::endl;
     std::cerr << "Usage: " << argv[0]
               << " --listen-ip <ip> --listen-port <port> --target-ip <ip> "
-                 "--target-port <port> --client-drop <chance> --server-drop <chance> "
+                 "--target-port <port> --client-drop <chance> --server-drop "
+                 "<chance> "
                  "--client-delay <chance> --server-delay <chance> "
                  "--client-delay-time <ms> --server-delay-time <ms>"
               << std::endl;
     std::cerr << "Example: " << argv[0]
-              << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip 127.0.0.1 "
+              << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip "
+                 "127.0.0.1 "
                  "--target-port 9090 --client-drop 0.1 --server-drop 0.1 "
-                 "--client-delay 0.2 --server-delay 0.2 --client-delay-time 100 "
+                 "--client-delay 0.2 --server-delay 0.2 --client-delay-time "
+                 "100 "
                  "--server-delay-time 100"
               << std::endl;
     return EXIT_FAILURE;
@@ -256,8 +269,8 @@ int main(int argc, char *argv[]) {
   std::thread forwardingThread(
       forward_packets, listenIP, listenPort, forwardIP, forwardPort,
       voiceBufferSize, client_drop_chance, server_drop_chance,
-      client_delay_chance, server_delay_chance,
-      client_delay_time, server_delay_time);
+      client_delay_chance, server_delay_chance, client_delay_time,
+      server_delay_time);
 
   forwardingThread.join();
 

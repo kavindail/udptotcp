@@ -123,25 +123,26 @@ void Server::print_message() {
 
   buffer[bytesReceived] = '\0';
 
-  // Check the first byte for the sequence number
-  int receivedSequence = buffer[0] - '0'; // Convert from ASCII to integer
+  int receivedSequence = buffer[0] - '0'; 
 
-  // Send ACK for the received sequence
-  string ackMessage = "ACK: " + to_string(receivedSequence);
-  ssize_t ackBytes = sendto(socketFD, ackMessage.c_str(), ackMessage.size(), 0,
+  char ackMessage[2];
+  ackMessage[0] = buffer[0]; 
+  ackMessage[1] = '\0';
+
+  ssize_t ackBytes = sendto(socketFD, ackMessage, 1, 0,
                             (struct sockaddr *)&client_addr, client_addr_size);
   if (ackBytes == -1) {
     cerr << "Error sending acknowledgment: " << strerror(errno) << endl;
     return;
   }
+  std::cout << "Received sequence number is: " << receivedSequence << std::endl;
+  std::cout << "Sending back acknowledgement number: " << receivedSequence << std::endl;
 
-  // Only process the message if the sequence matches the expected value
   if (receivedSequence == expectedSequence) {
-    cout << "Received message: " << (buffer + 1) << endl; // Print everything after the first byte
-    expectedSequence = 1 - expectedSequence; // Toggle the expected sequence (0 -> 1, 1 -> 0)
+    cout << "Received message: " << (buffer + 1) << endl; 
+    expectedSequence = 1 - expectedSequence; 
   } else {
-    cout << "Out-of-sequence packet received (expected " << expectedSequence
-         << ", got " << receivedSequence << "). Ignoring message." << endl;
+    cout << "Received duplicate packet," << std::endl <<  "sequence number is: " << expectedSequence << std::endl;
   }
 }
 

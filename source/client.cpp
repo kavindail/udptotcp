@@ -18,10 +18,11 @@ public:
   int socketFD;
   const int port, timeout;
   const string ipAddress;
+  int sequenceNumber;  // Added sequence number
 
   Client(const string ipAddress, const int port, const int timeout)
       : socketFD(DEFAULTFDVALUE), ipAddress(ipAddress), port(port),
-        timeout(timeout) {}
+        timeout(timeout), sequenceNumber(0) {}
 
   ~Client() { close_socket(socketFD); }
   int create_socket();
@@ -29,7 +30,7 @@ public:
   void close_socket(int socketFD);
 };
 
-// TODO: Implement sequence number logic here
+// Implemented sequence number logic here
 int main(int argc, char *argv[]) {
   if (argc != NUMBOFARGS) {
     cerr << "Incorrect amount of command line arguments, only provide IP "
@@ -83,7 +84,7 @@ void Client::send_message(int socketFD, string message) {
     exit(EXIT_FAILURE);
   }
 
-  // set the timeout for waiting for ack using SO_RCVTIMEO property
+  // Set the timeout for waiting for ack using SO_RCVTIMEO property
   struct timeval tv;
   tv.tv_sec = timeout;
   tv.tv_usec = 0;
@@ -97,23 +98,45 @@ void Client::send_message(int socketFD, string message) {
   socklen_t server_len = sizeof(server_addr);
 
   while (true) {
-    request = sendto(socketFD, message.c_str(), message.size(), 0,
+    // Prepare the message with the sequence number at buffer[0]
+    // Convert sequence number to character and prepend to message
+    string seq_message = to_string(sequenceNumber) + message;
+
+    // Send the message
+    request = sendto(socketFD, seq_message.c_str(), seq_message.size(), 0,
                      (sockaddr *)&server_addr, server_len);
     if (request == -1) {
       cerr << "Error in sending request to server: " << strerror(errno) << endl;
       exit(EXIT_FAILURE);
     }
-    cout << "Message sent to server, waiting " << timeout
-         << " seconds for acknowledgment..." << endl;
+    cout << "Message sent to server with sequence number " << sequenceNumber
+         << ", waiting " << timeout << " seconds for acknowledgment..." << endl;
 
-    ssize_t ack = recvfrom(socketFD, buffer, BUFFERSIZE, 0,
+    // Wait for acknowledgment
+    ssize_t ack = recvfrom(socketFD, buffer, BUFFERSIZE - 1, 0,
                            (sockaddr *)&server_addr, &server_len);
     if (ack > 0) {
       buffer[ack] = '\0';
-      cout << "Acknowledgment received: " << buffer << endl;
-      break;
+
+      // Check the acknowledgment sequence number
+      int ackSequenceNumber = buffer[0] - '0';  // Extract sequence number from buffer[0]
+
+      cout << "Acknowledgment received with ack number: " << ackSequenceNumber << endl;
+
+      if (ackSequenceNumber == sequenceNumber) {
+        // Sequence number matches, toggle sequence number for next message
+        sequenceNumber = 1 - sequenceNumber;  // Alternate between 0 and 1
+        break;
+      } else {
+        // Sequence number mismatch, possibly due to duplicate ack, resend
+        cout << "Acknowledgment sequence number mismatch (expected "
+             << sequenceNumber << ", got " << ackSequenceNumber
+             << "), resending message..." << endl;
+        continue;
+      }
     }
 
+    // Handle timeout
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       cout << "No acknowledgment received within timeout, resending message..."
            << endl;
