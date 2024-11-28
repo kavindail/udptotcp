@@ -101,9 +101,9 @@ void Client::send_message(int socketFD, string message) {
 
     // add sequence number to the beginning
     string first_bit = to_string(sequenceNumber);
-    string seq_message = first_bit + message;
+    message = first_bit + message;
 
-    request = sendto(socketFD, seq_message.c_str(), seq_message.size(), 0,
+    request = sendto(socketFD, message.c_str(), message.size(), 0,
                      (sockaddr *)&server_addr, server_len);
     if (request == -1) {
       cerr << "Error in sending request to server: " << strerror(errno) << endl;
