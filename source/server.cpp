@@ -9,18 +9,18 @@
 #define DEFAULTFDVALUE -1
 #define NUMBOFARGS 5
 #define BUFFERSIZE 1500
+#define STARTING_SEQ 0
 
 using namespace std;
 
 class Server {
 public:
-  int socketFD;
+  int socketFD, expectedSequence;
   const int port;
   const string listenIP;
-  int expectedSequence; // Tracks the expected sequence (0 or 1)
 
   Server(const string &listenIP, const int port)
-      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP), expectedSequence(0) {}
+      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP), expectedSequence(STARTING_SEQ) {}
 
   ~Server() { close_socket(socketFD); }
 
@@ -125,6 +125,7 @@ void Server::print_message() {
 
   int receivedSequence = buffer[0] - '0'; 
 
+  // send ack back to client
   char ackMessage[2];
   ackMessage[0] = buffer[0]; 
   ackMessage[1] = '\0';
@@ -135,14 +136,15 @@ void Server::print_message() {
     cerr << "Error sending acknowledgment: " << strerror(errno) << endl;
     return;
   }
-  std::cout << "Received sequence number is: " << receivedSequence << std::endl;
-  std::cout << "Sending back acknowledgement number: " << receivedSequence << std::endl;
+
+  cout << "Received sequence number is: " << receivedSequence << endl;
+  cout << "Sending back acknowledgement number: " << receivedSequence << endl;
 
   if (receivedSequence == expectedSequence) {
     cout << "Received message: " << (buffer + 1) << endl; 
     expectedSequence = 1 - expectedSequence; 
   } else {
-    cout << "Received duplicate packet," << std::endl <<  "sequence number is: " << expectedSequence << std::endl;
+    cout << "Received duplicate packet," << endl <<  " expected sequence number is: " << expectedSequence << endl;
   }
 }
 
