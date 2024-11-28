@@ -10,6 +10,11 @@
 #include <chrono>
 #include <random>
 
+#define DEFAULT_ARGS_VALUE 0
+#define DEFAULT_ARGS_CHANCE_VALUE 0.0
+
+using namespace std;
+
 void forward_packets(const char *listen_ip, int listen_port,
                      const char *forwardIP, int forwardPort, int buffer_size,
                      double client_drop_chance, double server_drop_chance,
@@ -17,10 +22,10 @@ void forward_packets(const char *listen_ip, int listen_port,
                      int client_delay_time, int server_delay_time) {
   int sock;
   struct sockaddr_in listen_addr, sender_addr;
-  char *buffer = new char[buffer_size + 1];  // +1 for null terminator
+  char *buffer = new char[buffer_size + 1];  
 
   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-    std::cout << "Error creating socket" << std::endl;
+    cout << "Error creating socket" << endl;
     delete[] buffer;
     return;
   }
@@ -31,14 +36,14 @@ void forward_packets(const char *listen_ip, int listen_port,
   listen_addr.sin_addr.s_addr = inet_addr(listen_ip);
 
   if (bind(sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0) {
-    std::cout << "Binding socket failed" << std::endl;
+    cout << "Binding socket failed" << endl;
     close(sock);
     delete[] buffer;
     return;
   }
 
-  std::cout << "Success, waiting for UDP packets on " << listen_ip << ":"
-            << listen_port << std::endl;
+  cout << "Success, waiting for UDP packets on " << listen_ip << ":"
+            << listen_port << endl;
 
   struct sockaddr_in server_addr;
   memset(&server_addr, 0, sizeof(server_addr));
@@ -51,9 +56,9 @@ void forward_packets(const char *listen_ip, int listen_port,
   bool client_addr_set = false;
 
   // Random number generator setup
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(0.0, 1.0);
+  random_device rd;
+  mt19937 gen(rd());
+  uniform_real_distribution<> dis(0.0, 1.0);
 
   while (true) {
     // Clear the buffer at the start of each iteration
@@ -64,22 +69,22 @@ void forward_packets(const char *listen_ip, int listen_port,
     ssize_t recv_len = recvfrom(sock, buffer, buffer_size, 0,
                                 (struct sockaddr *)&sender_addr, &len);
     if (recv_len < 0) {
-      std::cout << "recvfrom error" << std::endl;
+      cout << "recvfrom error" << endl;
       continue;
     }
 
     // Null-terminate the buffer
     buffer[recv_len] = '\0';
 
-    std::string serverIPString = forwardIP;
+    string serverIPString = forwardIP;
     int serverIPPort = forwardPort;
 
-    std::string senderIPString = inet_ntoa(sender_addr.sin_addr);
+    string senderIPString = inet_ntoa(sender_addr.sin_addr);
     int senderIPPort = ntohs(sender_addr.sin_port);
 
-    std::cout << "Received packet from " << senderIPString << ":"
-              << senderIPPort << std::endl;
-    std::cout << "Packet contains data: " << buffer << std::endl;
+    cout << "Received packet from " << senderIPString << ":"
+              << senderIPPort << endl;
+    cout << "Packet contains data: " << buffer << endl;
 
     bool is_from_server =
         (senderIPString == serverIPString && senderIPPort == serverIPPort);
@@ -103,42 +108,42 @@ void forward_packets(const char *listen_ip, int listen_port,
     }
 
     if (drop_packet) {
-      std::cout << "Packet dropped." << std::endl;
+      cout << "Packet dropped." << endl;
       continue;
     }
 
     if (delay_packet) {
-      std::cout << "Delaying packet for " << delay_duration << " milliseconds."
-                << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(delay_duration));
+      cout << "Delaying packet for " << delay_duration << " milliseconds."
+                << endl;
+      this_thread::sleep_for(chrono::milliseconds(delay_duration));
     }
 
     if (is_from_server) {
-      std::cout << "Received a response from the server" << std::endl;
+      cout << "Received a response from the server" << endl;
       if (!client_addr_set) {
-        std::cout << "No client address known, cannot forward to client"
-                  << std::endl;
+        cout << "No client address known, cannot forward to client"
+                  << endl;
       } else {
         if (sendto(sock, buffer, recv_len, 0, (struct sockaddr *)&client_addr,
                    sizeof(client_addr)) < 0) {
-          std::cout << "sendto error when forwarding to client" << std::endl;
+          cout << "sendto error when forwarding to client" << endl;
         } else {
-          std::cout << "Forwarded response back to client "
+          cout << "Forwarded response back to client "
                     << inet_ntoa(client_addr.sin_addr) << ":"
-                    << ntohs(client_addr.sin_port) << std::endl;
+                    << ntohs(client_addr.sin_port) << endl;
         }
       }
     } else {
-      std::cout << "Received a packet from client" << std::endl;
+      cout << "Received a packet from client" << endl;
       client_addr = sender_addr;
       client_addr_set = true;
 
       if (sendto(sock, buffer, recv_len, 0, (struct sockaddr *)&server_addr,
                  sizeof(server_addr)) < 0) {
-        std::cout << "sendto error when forwarding to server" << std::endl;
+        cout << "sendto error when forwarding to server" << endl;
       } else {
-        std::cout << "Forwarded packet to server " << forwardIP << ":"
-                  << forwardPort << std::endl;
+        cout << "Forwarded packet to server " << forwardIP << ":"
+                  << forwardPort << endl;
       }
     }
 
@@ -151,122 +156,122 @@ void forward_packets(const char *listen_ip, int listen_port,
 }
 
 int main(int argc, char *argv[]) {
-  std::map<std::string, std::string> args;
+  map<string, string> args;
 
   for (int i = 1; i < argc - 1; i += 2) {
-    std::string arg = argv[i];
-    std::string value = argv[i + 1];
+    string arg = argv[i];
+    string value = argv[i + 1];
     args[arg] = value;
   }
 
   const char *listenIP = nullptr;
-  int listenPort = 0;
+  int listenPort = DEFAULT_ARGS_VALUE;
   const char *forwardIP = nullptr;
-  int forwardPort = 0;
+  int forwardPort = DEFAULT_ARGS_VALUE;
 
-  double client_drop_chance = 0.0;
-  double server_drop_chance = 0.0;
-  double client_delay_chance = 0.0;
-  double server_delay_chance = 0.0;
-  int client_delay_time = 0;
-  int server_delay_time = 0;
+  double client_drop_chance = DEFAULT_ARGS_CHANCE_VALUE;
+  double server_drop_chance = DEFAULT_ARGS_CHANCE_VALUE;
+  double client_delay_chance = DEFAULT_ARGS_CHANCE_VALUE;
+  double server_delay_chance = DEFAULT_ARGS_CHANCE_VALUE;
+  int client_delay_time = DEFAULT_ARGS_VALUE;
+  int server_delay_time = DEFAULT_ARGS_VALUE;
 
   try {
     if (args.find("--listen-ip") != args.end()) {
       listenIP = args["--listen-ip"].c_str();
     } else {
-      throw std::invalid_argument("Missing --listen-ip");
+      throw invalid_argument("Missing --listen-ip");
     }
 
     if (args.find("--listen-port") != args.end()) {
-      listenPort = std::stoi(args["--listen-port"]);
+      listenPort = stoi(args["--listen-port"]);
     } else {
-      throw std::invalid_argument("Missing --listen-port");
+      throw invalid_argument("Missing --listen-port");
     }
 
     if (args.find("--target-ip") != args.end()) {
       forwardIP = args["--target-ip"].c_str();
     } else {
-      throw std::invalid_argument("Missing --target-ip");
+      throw invalid_argument("Missing --target-ip");
     }
 
     if (args.find("--target-port") != args.end()) {
-      forwardPort = std::stoi(args["--target-port"]);
+      forwardPort = stoi(args["--target-port"]);
     } else {
-      throw std::invalid_argument("Missing --target-port");
+      throw invalid_argument("Missing --target-port");
     }
 
     if (args.find("--client-drop") != args.end()) {
-      client_drop_chance = std::stod(args["--client-drop"]);
+      client_drop_chance = stod(args["--client-drop"]);
     } else {
-      throw std::invalid_argument("Missing --client-drop");
+      throw invalid_argument("Missing --client-drop");
     }
 
     if (args.find("--server-drop") != args.end()) {
-      server_drop_chance = std::stod(args["--server-drop"]);
+      server_drop_chance = stod(args["--server-drop"]);
     } else {
-      throw std::invalid_argument("Missing --server-drop");
+      throw invalid_argument("Missing --server-drop");
     }
 
     if (args.find("--client-delay") != args.end()) {
-      client_delay_chance = std::stod(args["--client-delay"]);
+      client_delay_chance = stod(args["--client-delay"]);
     } else {
-      throw std::invalid_argument("Missing --client-delay");
+      throw invalid_argument("Missing --client-delay");
     }
 
     if (args.find("--server-delay") != args.end()) {
-      server_delay_chance = std::stod(args["--server-delay"]);
+      server_delay_chance = stod(args["--server-delay"]);
     } else {
-      throw std::invalid_argument("Missing --server-delay");
+      throw invalid_argument("Missing --server-delay");
     }
 
     if (args.find("--client-delay-time") != args.end()) {
-      client_delay_time = std::stoi(args["--client-delay-time"]);
+      client_delay_time = stoi(args["--client-delay-time"]);
     } else {
-      throw std::invalid_argument("Missing --client-delay-time");
+      throw invalid_argument("Missing --client-delay-time");
     }
 
     if (args.find("--server-delay-time") != args.end()) {
-      server_delay_time = std::stoi(args["--server-delay-time"]);
+      server_delay_time = stoi(args["--server-delay-time"]);
     } else {
-      throw std::invalid_argument("Missing --server-delay-time");
+      throw invalid_argument("Missing --server-delay-time");
     }
 
-  } catch (const std::exception &e) {
-    std::cerr << "Error parsing arguments: " << e.what() << std::endl;
-    std::cerr << "Usage: " << argv[0]
+  } catch (const exception &e) {
+    cerr << "Error parsing arguments: " << e.what() << endl;
+    cerr << "Usage: " << argv[0]
               << " --listen-ip <ip> --listen-port <port> --target-ip <ip> "
                  "--target-port <port> --client-drop <chance> --server-drop "
                  "<chance> "
                  "--client-delay <chance> --server-delay <chance> "
                  "--client-delay-time <ms> --server-delay-time <ms>"
-              << std::endl;
-    std::cerr << "Example: " << argv[0]
+              << endl;
+    cerr << "Example: " << argv[0]
               << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip "
                  "127.0.0.1 "
                  "--target-port 9090 --client-drop 0.1 --server-drop 0.1 "
                  "--client-delay 0.2 --server-delay 0.2 --client-delay-time "
                  "100 "
                  "--server-delay-time 100"
-              << std::endl;
+              << endl;
     return EXIT_FAILURE;
   }
 
-  std::cout << "Proxy Server Configuration:" << std::endl;
-  std::cout << "Listening on IP: " << listenIP << std::endl;
-  std::cout << "Listening on Port: " << listenPort << std::endl;
-  std::cout << "Forwarding to IP: " << forwardIP << std::endl;
-  std::cout << "Forwarding to Port: " << forwardPort << std::endl;
-  std::cout << "Client Drop Chance: " << client_drop_chance << std::endl;
-  std::cout << "Server Drop Chance: " << server_drop_chance << std::endl;
-  std::cout << "Client Delay Chance: " << client_delay_chance << std::endl;
-  std::cout << "Server Delay Chance: " << server_delay_chance << std::endl;
-  std::cout << "Client Delay Time: " << client_delay_time << " ms" << std::endl;
-  std::cout << "Server Delay Time: " << server_delay_time << " ms" << std::endl;
+  cout << "Proxy Server Configuration:" << endl;
+  cout << "Listening on IP: " << listenIP << endl;
+  cout << "Listening on Port: " << listenPort << endl;
+  cout << "Forwarding to IP: " << forwardIP << endl;
+  cout << "Forwarding to Port: " << forwardPort << endl;
+  cout << "Client Drop Chance: " << client_drop_chance << endl;
+  cout << "Server Drop Chance: " << server_drop_chance << endl;
+  cout << "Client Delay Chance: " << client_delay_chance << endl;
+  cout << "Server Delay Chance: " << server_delay_chance << endl;
+  cout << "Client Delay Time: " << client_delay_time << " ms" << endl;
+  cout << "Server Delay Time: " << server_delay_time << " ms" << endl;
 
   int voiceBufferSize = 5700;
 
-  std::thread forwardingThread(
+  thread forwardingThread(
       forward_packets, listenIP, listenPort, forwardIP, forwardPort,
       voiceBufferSize, client_drop_chance, server_drop_chance,
       client_delay_chance, server_delay_chance, client_delay_time,
