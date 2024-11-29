@@ -2,11 +2,11 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
-#include <limits>
 #define DEFAULTFDVALUE -1
 #define NUMBOFARGS 7
 #define BUFFERSIZE 1500
@@ -29,7 +29,6 @@ public:
   void send_message(int socketFD, string message);
   void close_socket(int socketFD);
 };
-
 
 int main(int argc, char *argv[]) {
   if (argc != NUMBOFARGS) {
@@ -71,7 +70,6 @@ int Client::create_socket() {
     exit(EXIT_FAILURE);
   }
 
-  // SC_RCVTIMEO will set the timeout to wait for ack
   struct timeval tv;
   tv.tv_sec = timeout;
   tv.tv_usec = 0;
@@ -99,7 +97,6 @@ void Client::send_message(int socketFD, string message) {
 
   while (true) {
 
-    // add sequence number to the beginning
     string first_bit = to_string(sequenceNumber);
     message = first_bit + message;
 
@@ -117,13 +114,13 @@ void Client::send_message(int socketFD, string message) {
     if (ack > 0) {
       buffer[ack] = '\0';
 
-      // check ack number to see if it matches sent sequence number
-      int ackSequenceNumber = buffer[0] - '0';  
+      int ackSequenceNumber = buffer[0] - '0';
 
-      cout << "Acknowledgment received with ack number: " << ackSequenceNumber << endl;
+      cout << "Acknowledgment received with ack number: " << ackSequenceNumber
+           << endl;
 
       if (ackSequenceNumber == sequenceNumber) {
-        sequenceNumber = 1 - sequenceNumber;  
+        sequenceNumber = 1 - sequenceNumber;
         break;
       } else {
         cout << "Acknowledgment sequence number mismatch (expected "
@@ -133,7 +130,6 @@ void Client::send_message(int socketFD, string message) {
       }
     }
 
-    // handle timeout
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       cout << "No acknowledgment received within timeout, resending message..."
            << endl;

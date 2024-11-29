@@ -1,18 +1,17 @@
 #include <arpa/inet.h>
+#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
+#include <random>
 #include <string>
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
-#include <chrono>
-#include <random>  
 
 #define DEFAULT_ARGS_VALUE 0
 #define DEFAULT_ARGS_CHANCE_VALUE 0.0
-
 
 void forward_packets(const char *listen_ip, int listen_port,
                      const char *forwardIP, int forwardPort, int buffer_size,
@@ -66,7 +65,7 @@ void forward_packets(const char *listen_ip, int listen_port,
                                 (struct sockaddr *)&sender_addr, &len);
     if (recv_len < 0) {
       std::cout << "recvfrom error" << std::endl;
-      continue;  
+      continue;
     }
 
     std::string serverIPString = forwardIP;
@@ -86,27 +85,28 @@ void forward_packets(const char *listen_ip, int listen_port,
     bool delay_packet = false;
     int delay_duration = 0;
 
-    double random_value = dis(gen);  // Generate a random number between 0 and 1
+    double random_value = dis(gen);
 
     if (is_from_server) {
       drop_packet = random_value < server_drop_chance;
-      random_value = dis(gen);  // Generate a new random number for delay
+      random_value = dis(gen);
       delay_packet = random_value < server_delay_chance;
       delay_duration = server_delay_time;
     } else {
       drop_packet = random_value < client_drop_chance;
-      random_value = dis(gen);  // Generate a new random number for delay
+      random_value = dis(gen);
       delay_packet = random_value < client_delay_chance;
       delay_duration = client_delay_time;
     }
 
     if (drop_packet) {
       std::cout << "Packet dropped." << std::endl;
-      continue;  
+      continue;
     }
 
     if (delay_packet) {
-      std::cout << "Delaying packet for " << delay_duration << " milliseconds." << std::endl;
+      std::cout << "Delaying packet for " << delay_duration << " milliseconds."
+                << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(delay_duration));
     }
 
@@ -228,18 +228,20 @@ int main(int argc, char *argv[]) {
 
   } catch (const std::exception &e) {
     std::cerr << "Error parsing arguments: " << e.what() << std::endl;
-    std::cerr << "Usage: " << argv[0]
-              << " --listen-ip <ip> --listen-port <port> --target-ip <ip> "
-                 "--target-port <port> --client-drop <chance> --server-drop <chance> "
-                 "--client-delay <chance> --server-delay <chance> "
-                 "--client-delay-time <ms> --server-delay-time <ms>"
-              << std::endl;
-    std::cerr << "Example: " << argv[0]
-              << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip 127.0.0.1 "
-                 "--target-port 9090 --client-drop 0.1 --server-drop 0.1 "
-                 "--client-delay 0.2 --server-delay 0.2 --client-delay-time 100 "
-                 "--server-delay-time 100"
-              << std::endl;
+    std::cerr
+        << "Usage: " << argv[0]
+        << " --listen-ip <ip> --listen-port <port> --target-ip <ip> "
+           "--target-port <port> --client-drop <chance> --server-drop <chance> "
+           "--client-delay <chance> --server-delay <chance> "
+           "--client-delay-time <ms> --server-delay-time <ms>"
+        << std::endl;
+    std::cerr
+        << "Example: " << argv[0]
+        << " --listen-ip 127.0.0.1 --listen-port 8080 --target-ip 127.0.0.1 "
+           "--target-port 9090 --client-drop 0.1 --server-drop 0.1 "
+           "--client-delay 0.2 --server-delay 0.2 --client-delay-time 100 "
+           "--server-delay-time 100"
+        << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -257,11 +259,11 @@ int main(int argc, char *argv[]) {
 
   int voiceBufferSize = 5700;
 
-  std::thread forwardingThread(
-      forward_packets, listenIP, listenPort, forwardIP, forwardPort,
-      voiceBufferSize, client_drop_chance, server_drop_chance,
-      client_delay_chance, server_delay_chance,
-      client_delay_time, server_delay_time);
+  std::thread forwardingThread(forward_packets, listenIP, listenPort, forwardIP,
+                               forwardPort, voiceBufferSize, client_drop_chance,
+                               server_drop_chance, client_delay_chance,
+                               server_delay_chance, client_delay_time,
+                               server_delay_time);
 
   forwardingThread.join();
 

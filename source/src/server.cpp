@@ -20,7 +20,8 @@ public:
   const string listenIP;
 
   Server(const string &listenIP, const int port)
-      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP), expectedSequence(STARTING_SEQ) {}
+      : socketFD(DEFAULTFDVALUE), port(port), listenIP(listenIP),
+        expectedSequence(STARTING_SEQ) {}
 
   ~Server() { close_socket(socketFD); }
 
@@ -123,11 +124,10 @@ void Server::print_message() {
 
   buffer[bytesReceived] = '\0';
 
-  int receivedSequence = buffer[0] - '0'; 
+  int receivedSequence = buffer[0] - '0';
 
-  // send ack back to client
   char ackMessage[2];
-  ackMessage[0] = buffer[0]; 
+  ackMessage[0] = buffer[0];
   ackMessage[1] = '\0';
 
   ssize_t ackBytes = sendto(socketFD, ackMessage, 1, 0,
@@ -141,10 +141,11 @@ void Server::print_message() {
   cout << "Sending back acknowledgement number: " << receivedSequence << endl;
 
   if (receivedSequence == expectedSequence) {
-    cout << "Received message: " << (buffer + 1) << endl; 
-    expectedSequence = 1 - expectedSequence; 
+    cout << "Received message: " << (buffer + 1) << endl;
+    expectedSequence = 1 - expectedSequence;
   } else {
-    cout << "Received duplicate packet," << endl <<  " expected sequence number is: " << expectedSequence << endl;
+    cout << "Received duplicate packet," << endl
+         << " expected sequence number is: " << expectedSequence << endl;
   }
 }
 
