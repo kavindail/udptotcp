@@ -167,7 +167,12 @@ int main(int argc, char *argv[]) {
     if (args.find("--listen-ip") != args.end()) {
       listenIP = args["--listen-ip"].c_str();
     } else {
-      std::cout << "Missing --listen-ip" << std::endl;
+      std::cout
+          << " --listen-ip ip --listen-port port --target-ip ip "
+             "--target-port port --client-drop chance --server-drop chance"
+             "--client-delay chance --server-delay chance "
+             "--client-delay-time ms --server-delay-time ms"
+          << std::endl;
       exit(1);
     }
 
