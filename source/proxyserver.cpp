@@ -20,7 +20,7 @@ void forward_packets(const char *listen_ip, int listen_port,
   char *buffer = new char[buffer_size];
 
   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-    std::cout << "Error creating socket" << std::endl;
+    std::cout << "error creating the socket" << std::endl;
     delete[] buffer;
     return;
   }
@@ -31,14 +31,14 @@ void forward_packets(const char *listen_ip, int listen_port,
   listen_addr.sin_addr.s_addr = inet_addr(listen_ip);
 
   if (bind(sock, (struct sockaddr *)&listen_addr, sizeof(listen_addr)) < 0) {
-    std::cout << "Binding socket failed" << std::endl;
+    std::cout << "error binding the socket" << std::endl;
     close(sock);
     delete[] buffer;
     return;
   }
 
-  std::cout << "Success, waiting for UDP packets on " << listen_ip << ":"
-            << listen_port << std::endl;
+  std::cout << "Waiting for UDP packets on " << listen_ip << ":" << listen_port
+            << std::endl;
 
   struct sockaddr_in server_addr;
   memset(&server_addr, 0, sizeof(server_addr));
@@ -110,14 +110,14 @@ void forward_packets(const char *listen_ip, int listen_port,
     if (is_from_server) {
       std::cout << "Received response from the server" << std::endl;
       if (!client_addr_set) {
-        std::cout << "No client address to forward to " << std::endl;
+        std::cout << "No client address to forward the packet to" << std::endl;
       } else {
         if (sendto(sock, buffer, recv_len, 0, (struct sockaddr *)&client_addr,
                    sizeof(client_addr)) < 0) {
           std::cout << "sendto error when forwarding the packet to the client"
                     << std::endl;
         } else {
-          std::cout << "Forwarded response to client at ip "
+          std::cout << "forwarded response to client at ip "
                     << inet_ntoa(client_addr.sin_addr) << ":"
                     << ntohs(client_addr.sin_port) << std::endl;
         }
@@ -179,63 +179,63 @@ int main(int argc, char *argv[]) {
     if (args.find("--listen-port") != args.end()) {
       listenPort = std::stoi(args["--listen-port"]);
     } else {
-      std::cout << "Missing --listen-port" << std::endl;
+      std::cout << "missing --listen-port" << std::endl;
       exit(1);
     }
 
     if (args.find("--target-ip") != args.end()) {
       forwardIP = args["--target-ip"].c_str();
     } else {
-      std::cout << "Missing --target-ip" << std::endl;
+      std::cout << "missing --target-ip" << std::endl;
       exit(1);
     }
 
     if (args.find("--target-port") != args.end()) {
       forwardPort = std::stoi(args["--target-port"]);
     } else {
-      std::cout << "Missing --target-port" << std::endl;
+      std::cout << "missing --target-port" << std::endl;
       exit(1);
     }
 
     if (args.find("--client-drop") != args.end()) {
       client_drop_chance = std::stod(args["--client-drop"]);
     } else {
-      std::cout << "Missing --client-drop" << std::endl;
+      std::cout << "missing --client-drop" << std::endl;
       exit(1);
     }
 
     if (args.find("--server-drop") != args.end()) {
       server_drop_chance = std::stod(args["--server-drop"]);
     } else {
-      std::cout << "Missing --server-drop" << std::endl;
+      std::cout << "missing --server-drop" << std::endl;
       exit(1);
     }
 
     if (args.find("--client-delay") != args.end()) {
       client_delay_chance = std::stod(args["--client-delay"]);
     } else {
-      std::cout << "Missing --client-delay" << std::endl;
+      std::cout << "missing --client-delay" << std::endl;
       exit(1);
     }
 
     if (args.find("--server-delay") != args.end()) {
       server_delay_chance = std::stod(args["--server-delay"]);
     } else {
-      std::cout << "Missing --server-delay" << std::endl;
+      std::cout << "missing --server-delay" << std::endl;
       exit(1);
     }
 
     if (args.find("--client-delay-time") != args.end()) {
       client_delay_time = std::stoi(args["--client-delay-time"]);
     } else {
-      std::cout << "Missing --client-delay-time" << std::endl;
+      std::cout << "missing --client-delay-time" << std::endl;
       exit(1);
     }
 
     if (args.find("--server-delay-time") != args.end()) {
       server_delay_time = std::stoi(args["--server-delay-time"]);
     } else {
-      std::cout << "Missing --server-delay-time" << std::endl;
+      std::cout << "missing --server-delay-time" << std::endl;
       exit(1);
     }
 
