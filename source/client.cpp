@@ -1,12 +1,9 @@
 #include <arpa/inet.h>
 #include <cstring>
-#include <fstream>
 #include <iostream>
-#include <limits>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <vector>
 #define DEFAULTFDVALUE -1
 #define NUMBOFARGS 7
 #define BUFFERSIZE 1500
@@ -95,13 +92,15 @@ void Client::send_message(int socketFD, string message) {
   char buffer[BUFFERSIZE];
   socklen_t server_len = sizeof(server_addr);
 
+  string original_message = message;
+
   while (true) {
 
     string first_bit = to_string(sequenceNumber);
-    message = first_bit + message;
+    string message_to_send = first_bit + original_message;
 
-    request = sendto(socketFD, message.c_str(), message.size(), 0,
-                     (sockaddr *)&server_addr, server_len);
+    request = sendto(socketFD, message_to_send.c_str(), message_to_send.size(),
+                     0, (sockaddr *)&server_addr, server_len);
     if (request == -1) {
       cerr << "Error in sending request to server: " << strerror(errno) << endl;
       exit(EXIT_FAILURE);
